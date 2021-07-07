@@ -47,7 +47,8 @@ class HlsQualitySelectorPlugin {
    * Binds listener for quality level changes.
    */
   bindPlayerEvents() {
-    this.player.qualityLevels().on('addqualitylevel', this.onAddQualityLevel.bind(this));
+    this.player.qualityLevels().on('addqualitylevel', this.onAddQualityLevel.bind(this,
+      this.config.sortAscending, this.config.autoPlacement));
   }
 
   /**
@@ -101,13 +102,22 @@ class HlsQualitySelectorPlugin {
 
   /**
    * Executed when a quality level is added from HLS playlist.
+   *
+   * @param {boolean} sortAscending - sort quality levels, default is ascending.
+   * @param {string} autoPlacement - place the 'auto' menu item at the 'top' or
+   * 'bottom' (default).
    */
-  onAddQualityLevel() {
+  onAddQualityLevel(sortAscending = true, autoPlacement = 'bottom') {
 
     const player = this.player;
     const qualityList = player.qualityLevels();
     const levels = qualityList.levels_ || [];
     const levelItems = [];
+    const autoMenuItem = this.getQualityMenuItem.call(this, {
+      label: player.localize('Auto'),
+      value: 'auto',
+      selected: true
+    });
 
     for (let i = 0; i < levels.length; ++i) {
       if (!levelItems.filter(_existingItem => {
@@ -122,28 +132,29 @@ class HlsQualitySelectorPlugin {
       }
     }
 
-    levelItems.sort((current, next) => {
-      if ((typeof current !== 'object') || (typeof next !== 'object')) {
-        return -1;
-      }
-      if (current.item.value < next.item.value) {
-        return -1;
-      }
-      if (current.item.value > next.item.value) {
-        return 1;
-      }
-      return 0;
-    });
-
-    levelItems.push(this.getQualityMenuItem.call(this, {
-      label: player.localize('Auto'),
-      value: 'auto',
-      selected: true
-    }));
+    // sort the quality level values
+    if (sortAscending) {
+      levelItems.sort((current, next) => {
+        if ((typeof current !== 'object') || (typeof next !== 'object')) {
+          return -1;
+        }
+        return current.item.value - next.item.value;
+      });
+    } else {
+      levelItems.sort((current, next) => {
+        if ((typeof current !== 'object') || (typeof next !== 'object')) {
+          return -1;
+        }
+        return next.item.value - current.item.value;
+      });
+    }
 
     if (this._qualityButton) {
       this._qualityButton.createItems = function() {
-        return levelItems;
+        // put 'auto' at the top or bottom per option parameter
+        return autoPlacement === 'top' ? [autoMenuItem, ...levelItems] :
+          [...levelItems, autoMenuItem];
+
       };
       this._qualityButton.update();
     }
