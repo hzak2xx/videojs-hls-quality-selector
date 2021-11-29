@@ -542,7 +542,7 @@ var HlsQualitySelectorPlugin = function () {
 
 
   HlsQualitySelectorPlugin.prototype.getCurrentQuality = function getCurrentQuality() {
-    return this._currentQuality || 'auto';
+    return this._currentQuality || this.player.localize('Auto');
   };
 
   return HlsQualitySelectorPlugin;
